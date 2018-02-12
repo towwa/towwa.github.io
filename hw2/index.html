@@ -48,12 +48,13 @@ void main() {
         N = normalize(S-C);
     }
   //vec3 N = sph(2.*vPos.x, 2.*vPos.y);
-  vec3 L = vec3(1.*sin(uTime * 6.),1.,.7);
-  float c = max(.1, dot(N, normalize(L)));
+  vec3 L = vec3(5.*sin(uTime * 6.),1., 5. * cos(uTime * 6.));
+  float c = max(0.1, dot(N, normalize(L)));
   c = step(0.1, N.z) * 0.3 * c;
   vec3 color = vec3(c, c*c, c);
   gl_FragColor = vec4(sqrt(color), 1.0);
 }
+
 </script>
 
 
