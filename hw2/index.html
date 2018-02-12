@@ -22,8 +22,6 @@
 <!!-------- FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK -------->
 
 <script id='my_fragment_shader' type='x-shader/x-fragment'>
-
-
 uniform float uTime;
 varying vec3 vPos;
 
@@ -35,11 +33,25 @@ vec3 sph(float x, float y) {
 }
 
 void main() {
-  vec3 N = sph(2.*vPos.x, 2.*vPos.y);
-  vec3 L = vec3(.5*sin(5.*uTime),1.,1.);
+    float f = 0.9;
+    float r = 0.5;
+    vec3 C = vec3(0, 0, 0); // circle center
+    vec3 V = vec3(0, 0, f);
+    vec3 W = normalize(vec3(vPos.x, vPos.y, -f));
+    vec3 P = V-C;
+    float pt = -dot(W,P) + sqrt(dot(W,P) * dot(W,P) - dot(P,P) + r*r); // plus t
+    float mt = -dot(W,P) - sqrt(dot(W,P) * dot(W,P) - dot(P,P) + r*r); // minus t
+    vec3 N;
+    if (mt > 0. || pt > 0.){
+        float t = mt;
+        vec3 S = V+t*W;
+        N = normalize(S-C);
+    }
+  //vec3 N = sph(2.*vPos.x, 2.*vPos.y);
+  vec3 L = vec3(1.*sin(uTime * 6.),1.,.7);
   float c = max(.1, dot(N, normalize(L)));
-  c = step(0., N.z) * .5 * c;
-  vec3 color = vec3(c, c*c, c*c*c);
+  c = step(0.1, N.z) * 0.3 * c;
+  vec3 color = vec3(c, c*c, c);
   gl_FragColor = vec4(sqrt(color), 1.0);
 }
 </script>
@@ -48,7 +60,7 @@ void main() {
 <!!-------- CREATE A PROPERLY DESCRIPTIVE TITLE BELOW -------->
 
 <script id='my_title' type='text/html'>
-Homework 2 - ray tracing
+Homework 2 - ray tracing - amh877
 </script>
 
 
