@@ -27,20 +27,36 @@ vec3 sph(float x, float y) {
 }
 
 void main() {
-   vec3 N = sph(2.*vPos.x-1., 2.*vPos.y);
-   vec3 N2 = sph(2.*vPos.x+1., 2.*vPos.y);
+    float f = 1.;
+    float r = 0.45;
+    vec3 C = vec3(.3, 0, 0); // circle center
+    vec3 V = vec3(0, 0, f);
+    vec3 W = normalize(vec3(vPos.x, vPos.y, -f));
+    vec3 P = V-C;
+    float disc = dot(W,P) * dot(W,P) - dot(P,P) + r*r;
+    float pt, mt;
+    if (disc >= 0.) pt = -dot(W,P) + sqrt(disc);
+    if (disc >= 0.) mt = -dot(W,P) - sqrt(disc);
+    vec3 N;
+    if (mt > 0. || pt > 0.){
+        float t = mt > pt ? pt : mt;
+        vec3 S = V+t*W;
+        N = normalize(S-C);
+    }
+   vec3 N2 = sph(2.*vPos.x+1., 2.*vPos.y); // 2nd sphere
    vec3 L = vec3(.5*sin(5.*uTime),1.,1.);
    vec3 R = 2. * (dot(N, L)) * N - L;
 
-   float c = max(.1, dot(N, normalize(L)));
-   c = step(0., N.z) * .5 * c;
-   vec3 color = vec3(c, c*c, c*c*c);
-   //gl_FragColor = vec4(sqrt(color), 1.0);
+   float c = max(.3, dot(N, normalize(L)));
+   c = step(0.1, N.z) * .5 * c;
+   vec3 color = vec3(c, c*c, c);
+   vec3 phong =  color * pow(max(0., dot(-W, R)), .7);
+   gl_FragColor = vec4(sqrt(color+phong), 2.0);
 
    float c2 = max(.1, dot(N2, normalize(L)));
-   c2 = step(0., N2.z) * .5 * c2;
-   vec3 color2 = vec3(c2, c2*c2, c2);
-   gl_FragColor = vec4(sqrt(color2), 1.0) + vec4(sqrt(color), 1.0);
+   c2 = step(0.1, N2.z) * .5 * c2;
+   vec3 color2 = vec3(c2, c2+c2, c2);
+   gl_FragColor = vec4(sqrt(color2), 1.0) + vec4(sqrt(color), 1.0); // both
 
 }</script>
 
@@ -89,7 +105,7 @@ var vs = my_vertex_shader.innerHTML,
     fs = fs.substring(1, fs.length);
 
 document.body.innerHTML = [''
-   ,'<center><font size=6 color=#b0b0b0>Hw4 </center>'
+   ,'<center><font size=6 color=#b0b0b0>Hw3 </center>'
    ,'<TABLE cellspacing=0 cellpadding=0><TR>'
    ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
    ,'</TR><TR>'

@@ -33,17 +33,6 @@ vec3 sph(float x, float y) {
 }
 
 void main() {
-    uniform float uTime;
-varying vec3 vPos;
-
-vec3 sph(float x, float y) {
-  float zz = 1. - x * x - y * y;
-  float sign = step(0., zz);
-  float z = mix(-1., sqrt(zz), sign);
-  return vec3(x, y, z);
-}
-
-void main() {
     float f = 0.9;
     float r = 0.5;
     vec3 C = vec3(0, 0, 0); // circle center
@@ -60,15 +49,11 @@ void main() {
         vec3 S = V+t*W;
         N = normalize(S-C);
     }
-  //vec3 N = sph(2.*vPos.x, 2.*vPos.y);
   vec3 L = vec3(5.*sin(uTime * 6.),1., 5. * cos(uTime * 6.));
   float c = max(0.1, dot(N, normalize(L)));
   c = step(0.1, N.z) * 0.3 * c;
   vec3 color = vec3(c, c*c, c);
   gl_FragColor = vec4(sqrt(color), 1.0);
-}
-
-
 }
 
 </script>
