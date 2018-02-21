@@ -47,7 +47,7 @@ void main() {
    vec3 L = vec3(.5*sin(5.*uTime),1.,1.);
    vec3 R = 2. * (dot(N, L)) * N - L;
 
-   float c = max(.3, dot(N, normalize(L)));
+   float c = max(.3, dot(R, normalize(L)));
    c = step(0.1, N.z) * .5 * c;
    vec3 color = vec3(c, c*c, c);
    vec3 phong =  color * pow(max(0., dot(-W, R)), .7);
