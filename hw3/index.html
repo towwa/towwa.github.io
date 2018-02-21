@@ -50,7 +50,7 @@ vec3 phong(vec3 E, vec3 L, vec3 N, vec3 A, vec3 D, vec3 S){
     vec3 reflection = 2. * dot(N,L) * N - L;
     float d = max(0., dot(N, normalize(L)));
     vec3 c = A;  //ambient color
-    float s = pow(max(0.,dot(E,reflection)),2.);
+    float s = pow(max(0.,dot(E,reflection)),1.);
     c += D * d + S * s;
 
     return c;
@@ -58,8 +58,8 @@ vec3 phong(vec3 E, vec3 L, vec3 N, vec3 A, vec3 D, vec3 S){
 
 void main() {
    float f = 0.4;
-   vec4 C = vec4(0.,0.,0.,0.3*sin(uTime+1.));
-   vec4 C2 = vec4(0.2,0.,0.,0.3*sin(uTime));
+   vec4 C = vec4(0.,0.,0.,0.3*sin(uTime*0.5));
+   vec4 C2 = vec4(0.2,0.,0.,0.3*sin(uTime*0.5+0.3));
    vec3 V = vec3(0.,0.,f);
    vec3 W = normalize(vec3(vPos.x,vPos.y,-f));
    vec3 E = -W;
