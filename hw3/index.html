@@ -19,21 +19,21 @@
 uniform float uTime;
 varying vec3 vPos;
 
-vec3 sph(float x, float y) {
-   float zz = 1. - x * x - y * y;
-   float sign = step(0., zz);
-   float z = mix(-1., sqrt(zz), sign);
-   return vec3(x, y, z);
-}
-
-void main() {
-    float f = 1.;
-    float r = 0.45;
-    vec3 C = vec3(.3, 0, 0); // circle center
-    vec3 V = vec3(0, 0, f);
-    vec3 W = normalize(vec3(vPos.x, vPos.y, -f));
-    vec3 P = V-C;
-    float disc = dot(W,P) * dot(W,P) - dot(P,P) + r*r;
+ vec3 sph(vec3 V, vec4 C, vec3 W){ // center has xyz and radius, W is where
+    vec3 P = V-C.xyz;
+    float disc = dot(W,P) * dot(W,P) - dot(P,P) + C.w*C.w;
+    vec3 S;
+    float t;
+    if (disc < 0.){
+       S = vec3(0., 0., 0.);
+       return S;
+    }
+    if (disc == 0.){
+       t = -1. * dot(W,P);
+       if (t < 0.) return vec3(-1., -1., -1.);
+       S = V+t*W;
+       return normalize(S-C.xyz);
+    }
     float pt, mt;
     if (disc >= 0.) pt = -dot(W,P) + sqrt(disc);
     if (disc >= 0.) mt = -dot(W,P) - sqrt(disc);
@@ -41,22 +41,56 @@ void main() {
     if (mt > 0. || pt > 0.){
         float t = mt > pt ? pt : mt;
         vec3 S = V+t*W;
-        N = normalize(S-C);
+        N = normalize(S-C.xyz);
     }
-   vec3 N2 = sph(2.*vPos.x+1., 2.*vPos.y); // 2nd sphere
+    return N;
+ }
+
+vec3 phong(vec3 E, vec3 L, vec3 N, vec3 A, vec3 D, vec3 S){
+    vec3 reflection = 2. * dot(N,L) * N - L;
+    float d = max(0., dot(N, normalize(L)));
+    vec3 c = A;  //ambient color
+    float s = pow(max(0.,dot(E,reflection)),2.);
+    c += D * d + S * s;
+
+    return c;
+ }
+
+void main() {
+   float f = 0.4;
+   vec4 C = vec4(0.,0.,0.,0.3*sin(uTime+1.));
+   vec4 C2 = vec4(0.2,0.,0.,0.3*sin(uTime));
+   vec3 V = vec3(0.,0.,f);
+   vec3 W = normalize(vec3(vPos.x,vPos.y,-f));
+   vec3 E = -W;
+   vec3 N = sph(V,C,W);
+   vec3 N2 = sph(V,C2,W);
+   vec3 color;
+
    vec3 L = vec3(.5*sin(5.*uTime),1.,1.);
-   vec3 R = 2. * (dot(N, L)) * N - L;
 
-   float c = max(.3, dot(R, normalize(L)));
-   c = step(0.1, N.z) * .5 * c;
-   vec3 color = vec3(c, c*c, c);
-   vec3 phong =  color * pow(max(0., dot(-W, R)), .7);
-   gl_FragColor = vec4(sqrt(color+phong), 2.0);
+   float noisY = noise(vec3(sin(uTime),sin(uTime * 1.), sin(uTime * 3.)));
+    vec3 ambient_noise = vec3(noisY, noisY * 0.5, noisY * 0.2);
+    vec3 color1 = phong(E,L,normalize(N),ambient_noise,vec3(.2,1.,.2),vec3(.8,.3,.4));
+    vec3 color2 = phong(E,L,normalize(N2),ambient_noise,vec3(.2,.4,.2),vec3(.8,.3,.4));
 
-   float c2 = max(.1, dot(N2, normalize(L)));
-   c2 = step(0.1, N2.z) * .5 * c2;
-   vec3 color2 = vec3(c2, c2+c2, c2);
-   gl_FragColor = vec4(sqrt(color2), 1.0) + vec4(sqrt(color), 1.0); // both
+   if (N.z >= 0. && N2.z >= 0.){
+        if (N.z >= N2.z){
+            color = color1;
+        }
+        else{
+            color = color2;
+        }
+    }
+    else if (N.z >= 0.){
+        color = color1;
+    }
+    else if (N2.z >= 0.){
+        color = color2;
+    }
+
+
+   gl_FragColor = vec4(sqrt(color), 1.0); // both
 
 }</script>
 
