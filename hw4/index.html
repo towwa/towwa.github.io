@@ -19,6 +19,13 @@
 uniform float uTime;
 varying vec3  vPos;
 uniform mat4  uMat;
+uniform mat4 uIdentity;
+uniform mat4 uTranslate;
+uniform mat4 uRotatex;
+uniform mat4 uRotatey;
+uniform mat4 uRotatez;
+uniform mat4 uScale;
+uniform vec4 uS[9];
 
 vec4 raySph(vec3 V,vec3 W,vec4 S) {// TRACE RAY
    vec3  P = S.xyz - V;            // TO SPHERE
@@ -33,18 +40,22 @@ void main() {
    vec3 color = vec3(0.,0.,.1); // BACKGD COLOR
    vec3 V = vec3(0., 0., f);    // CREATE RAY
    vec3 W = normalize(vec3(vPos.xy, -f));
-   vec4 S = vec4(0.,0.,0.,.5); // DEFINE SPHERE
 
-   vec3 C = S.xyz;           // SEPARATE CENTER
-   float r = S.w;                 // AND RADIUS
-   C = (uMat * vec4(C, 1.)).xyz;  // APPLY uMat
+   for (int i = 0; i < 9; i++){
+       vec4 S = uS[i]; // DEFINE SPHERE
 
-   vec4 P = raySph(V,W,vec4(C,r));// SHOOT RAY:
-   if (P.w > 0.) {                // IF IT HITS
-      vec3 N = (P.xyz - C) / r;   // DO SHADING
-      vec3 L = normalize(vec3(1.,1.,1.));
-      float c = .1 + .9 * max(0., dot(N, L));
-      color = vec3(c, c*c, c*c*c);
+       vec3 C = S.xyz;           // SEPARATE CENTER
+       float r = S.w;                 // AND RADIUS
+       C = (uTranslate*uRotatex*uRotatey*uRotatez*uScale * vec4(C, 1.)).xyz;  // APPLY uMat
+
+       vec4 P = raySph(V,W,vec4(C,r));// SHOOT RAY:
+       if (P.w > 0.) {                // IF IT HITS
+          vec3 N = (P.xyz - C) / r;   // DO SHADING
+          vec3 L = normalize(vec3(1.,1.,1.));
+          float c = .1 + .9 * max(0., dot(N, L));
+         color = vec3(c+c, c, c*c);
+         if (i/2*2==i)color = vec3(c, c*c, c*c);
+       }
    }
    gl_FragColor = vec4(sqrt(color), 1.0);
 }</script>
@@ -95,14 +106,55 @@ var startTime = Date.now();
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
    setUniform('1f', 'uTime', time);
+   setUniform('4fv', 'uS', [
+                            0.,0.,0.,.1,
+                            .5,.5,0.,.1,
+                            .5, -.5,0.,.1,
+                            -.5,.5,0.,.1,
+                            -.5,- .5,0.,.1,
+                            .5,.5,.5,.1,
+                            .5, -.5,-.5,.1,
+                            -.5,.5,.5,.1,
+                            -.5,- .5,-.5,.1,
+                            ]);
 
    // EXAMPLE OF SETTING UNIFORM SHADER VARIABLE uMat
 
    let z = 10 * Math.sin(2 * time);
+   let x = .7 * Math.sin(2 * time);
+  let x2 = 1.8 * Math.sin(1.5 * time);
+  let y = .7 * Math.cos(2 * time);
+  let t = .7 * Math.tan(1.5 * time);
+  let b = Math.max(.5, Math.cos(3*time));
    setUniform('Matrix4fv', 'uMat', false, [ 1, 0, 0, 0,
                                             0, 1, 0, 0,
-					    0, 0, 1, 0,
-					   .1, 0, z, 1]);
+					                        0, 0, 1, 0,
+					                       .1, 0, z, 1]);
+    setUniform('Matrix4fv', 'uIdentity', false, [ 1, 0, 0, 0,
+                                            0, 1, 0, 0,
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1]);
+    setUniform('Matrix4fv', 'uTranslate', false, [ 1, 0, 0, x,
+                                        0, 1, 0, x,
+                                        0, 0, 1, x,
+                                        0, 0, 0, 1]);
+    setUniform('Matrix4fv', 'uRotatex', false, [ 1, 0, 0, 0,
+                                        0, y, -x, 0,
+                                        0, x, -y, 0,
+                                        0, 0, 0, 1]);
+    setUniform('Matrix4fv', 'uScale', false, [ x2, 0, 0, 0,
+                                        0, x2, 0, 0,
+                                        0, 0, x2, 0,
+                                        0, 0, 0, x2]);
+    setUniform('Matrix4fv', 'uRotatey', false, [ y, 0, x, 0,
+                                        0, 1, 0, 0,
+                                        -x, 0, y, 0,
+                                        0, 0, 0, 1]);
+    setUniform('Matrix4fv', 'uRotatez', false, [ y, -x, 0, 0,
+                                        x, y, 0, 0,
+                                        0, 0, 1, 0,
+                                        0, 0, 0, 1]);
+
 }
 
 gl_start(canvas1, vs, fs);
