@@ -212,6 +212,158 @@ function createParametricShape(func, nu, nv) {
   return vertices;
 }
 
+function createpotShape(func, splfunc, nu, nv) {
+  let vertices = [];
+  for (let j = 0 ; j < nv ; j++) {
+     let v0 =  j    / nv;
+     let v1 = (j+1) / nv;
+     for (let i = 0 ; i <= nu ; i++) {
+        let u = i / nu;
+	if (j % 2)
+	   u = 1 - u;
+	vertices = vertices.concat(func(splfunc,u, v0));
+	vertices = vertices.concat(func(splfunc,u, v1));
+     }
+  }
+  return vertices;
+}
+function Bspline(P,t){
+  
+	let coefficients = [];
+	var Bspl = [ -1/6,  -3/6, -3/6,  1/6,  
+                  3/6, -6/6,  3/6,    0, 
+                  -3/6,   0,  3/6,  0,  
+                  1/6,  4/6,  4/6,   0];
+	for (let i = 0; i < 4; i++){
+		let temp = 0;
+		for (let j = 0; j < 4; j++){
+			temp += Bspl[4 * i + j] * P[j];
+		}
+		coefficients.push(temp);
+	}
+	return (coefficients[0] * t * t * t + coefficients[1] * t * t + coefficients[2] * t + coefficients[3]); 
+ 
+}
+function potVertex(func,u, v) {
+  let theta = 2 * Math.PI * u;
+  let a0 = [-0.1, 3, 1, 2];
+  let r = func(a0,v);
+  let x = r * Math.cos(theta);
+  let y = r * Math.sin(theta);
+  let z = v*4;
+  return [x, y, z,  x, y, z,  u, v]; 
+
+}
+function matrixStack(){
+    let stack = [];
+      let pointer = 0;
+      let identity = [
+              1,  0,  0,  0,
+              0,  1,  0,  0,
+              0,  0,  1,  0,
+              0,  0,  0,  1,
+          ];
+      stack.push(identity);
+      this.save = function(){
+        stack.push(stack[pointer]);
+        pointer += 1 ;
+        //console.log(pointer);
+    }
+
+      this.restore = function(){
+        stack.pop();
+        pointer -= 1;
+        // if empty gives identity matrix
+
+    }
+      this.translate = function(x,y,z){
+        m2 = [
+              1,  0,  0,  0,
+              0,  1,  0,  0,
+              0,  0,  1,  0,
+              x,  y,  z,  1,
+          ];
+        stack[pointer] = multiplyMatrices(m2,stack[pointer]);
+
+    }
+
+      this.rotatex = function(angle){
+        let s = Math.sin(angle);
+        let c = Math.cos(angle);
+        m2 = [
+              1,  0,  0,  0,
+              0,  c,  s,  0,
+              0,  -s,  c,  0,
+              0,  0,  0,  1,
+          ];
+        stack[pointer] = multiplyMatrices(m2,stack[pointer]);
+    }
+
+      this.rotatey = function(angle){
+        let s = Math.sin(angle);
+        let c = Math.cos(angle);
+        m2 = [
+              c,  0,  s,  0,
+              0,  1,  0,  0,
+              -s,  0,  c,  0,
+              0,  0,  0,  1,
+          ];
+        stack[pointer] = multiplyMatrices(m2,stack[pointer]);
+    }
+
+      this.rotatez = function(angle){
+        let s = Math.sin(angle);
+        let c = Math.cos(angle);
+        m2 = [
+              c,  s,  0,  0,
+              -s,  c,  0,  0,
+              0,  0,  1,  0,
+              0,  0,  0,  1,
+          ];
+        stack[pointer] = multiplyMatrices(m2,stack[pointer]);
+    }
+
+      this.scale = function(x,y,z){
+        m2 = [
+              x,  0,  0,  0,
+              0,  y,  0,  0,
+              0,  0,  z,  0,
+              0,  0,  0,  1,
+          ];
+        stack[pointer] = multiplyMatrices(m2,stack[pointer]);
+        //console.log(stack[pointer]);
+      }
+
+      this.cylinder = function(){
+        setBuffer(gl, cylinderStrip);
+        let objMat1 = stack[pointer];
+        let norMat1 = matrixInvert(objMat1);
+        setUniform('Matrix4fv', 'uObjectMat', false, objMat1);
+        setUniform('Matrix4fv', 'uNormalMat', false, norMat1);
+        setUniform('3fv', 'uRGB', [1,0,0]);
+        drawBuffer(gl);
+      }
+
+      this.sphere = function(r,g,b){
+        setBuffer(gl, sphereTriangleStrip);
+        let objMat1 = stack[pointer];
+        let norMat1 = matrixInvert(objMat1);
+        setUniform('Matrix4fv', 'uObjectMat', false, objMat1);
+        setUniform('Matrix4fv', 'uNormalMat', false, norMat1);
+        setUniform('3fv', 'uRGB', [r,g,b]);
+        drawBuffer(gl);
+      }
+      this.bowl = function(r,g,b){
+        setBuffer(gl, potTriangleStrip);
+        let objMat1 = stack[pointer];
+        let norMat1 = matrixInvert(objMat1);
+        setUniform('Matrix4fv', 'uObjectMat', false, objMat1);
+        setUniform('Matrix4fv', 'uNormalMat', false, norMat1);
+        setUniform('3fv', 'uRGB', [r,g,b]);
+        drawBuffer(gl);
+      }
+}
+
 function multiplyMatrices(x, y){
  let ans = [];
  for (let i=0; i<16; i++) ans.push(0);
@@ -259,7 +411,7 @@ function drawSpline(p0,p1,p2,p3,dt){
 
 function drawline(l1,cylinder){
 	 setBuffer(gl, cylinder);
-	 for (let a = 0; a < 100; a++){
+	 for (let a = 0; a < 1000; a++){
 	 	let b = l1[a];
 	 	console.log(b);
 	 	  let objMat1 = [
@@ -283,6 +435,7 @@ function drawline(l1,cylinder){
 var sphereTriangleStrip = createParametricShape(sphereVertex, 20, 10);
 var cylinderStrip = createParametricShape(cylinderVertex, 30, 10);
 var cubeStrip = createParametricShape(cubeVertex, 8, 5);
+var potTriangleStrip = createpotShape(potVertex, Bspline, 10, 20);
 
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
@@ -327,9 +480,21 @@ function animate(gl) {
    setUniform('Matrix4fv', 'uObjectMat', false, objMat1);
    setUniform('Matrix4fv', 'uNormalMat', false, norMat1);
    setUniform('3fv', 'uRGB', [1,0,0]);
-                      // FIRST DRAW CALL
-   let list2 = drawSpline(a0,a1,a2,a3,1/10);
-   drawline(list2,cubeStrip);
+   drawBuffer(gl);          // FIRST DRAW CALL
+   
+
+    var matrix = new matrixStack();
+    matrix.save();
+      matrix.translate(0,0.5,0);
+     matrix.scale(.1,.1,.1);
+     matrix.rotatey(time);
+     matrix.rotatex(time*10);
+     matrix.bowl(2,1,0);
+    matrix.restore();
+
+    let cub = drawSpline(a0,a1,a2,a3,1/10);
+   drawline(cub,cubeStrip);
+
 }
 
 gl_start(canvas1, vs, fs);
