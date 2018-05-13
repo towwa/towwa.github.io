@@ -1,9 +1,21 @@
 
+
+<link rel="stylesheet" href="styleGeneral.css"> </link>
+<style>
+canvas {background-color: black;}
+a {text-decoration: none;
+    color: black;}
+h1{background-color:#d6d2d1;}
+body{
+    background-color: black;
+}
+</style>
 <script src=lib1.js></script>
+
 
 <body >
 <center>
-<canvas id='canvas1' width=800 height=400 background-color=black></canvas>
+<canvas id='canvas1' width=1200 height=1200 background-color=black></canvas>
 </center>
 </body>
 
@@ -25,6 +37,7 @@
 <script id='my_fragment_shader' type='x-shader/x-fragment'>
 
  uniform float uTime;   // TIME, IN SECONDS
+ uniform vec2 uMouse;   // mousePos
 
  varying vec3 vPos;     // -1 < vPos.x < +1
                         // -1 < vPos.y < +1
@@ -43,12 +56,11 @@ vec2 rain(vec2 uv, float t) {
 
     uv*=3.;
 
-    vec2 a = vec2(3.,1.);
+    vec2 a = vec2(2.,1.);
     vec2 st = uv * a;
 
     vec2 id = floor(st);
     st.y += t*0.6;
-    //st.x += t*0.003 ;
 
     float noise = fract(sin(id.x * 73.33) * 728.654);
     st.y += noise;
@@ -58,7 +70,14 @@ vec2 rain(vec2 uv, float t) {
 
     t += fract(sin(id.x*68.24 + id.y * 1433.98) * 762.35)*6.283;
     float y =-sin(t + sin(t + sin(t) * 0.5)) * 0.42;
-    vec2 p1 = vec2(0., y);
+    float x = 0.;
+    //float x = -sin(t + sin(t + sin(t) * 0.5)) * 0.4;
+    //if (fract(id.x*68.24) < 0.33) {
+    //   x =  0.;
+    //} else if (fract(id.x*75.23) < 0.66) {
+    //    float x = -sin(t + sin(t + sin(t) * 0.5)) * 0.4;
+    //}
+    vec2 p1 = vec2(x, y);
     vec2 o1 = (st-p1)/a;
     float d = length(o1);
 
@@ -110,7 +129,7 @@ float DistRay(ray r, vec3 p) {
 float Bokeh(ray r, vec3 p, float size, float blur) {
 	float d = DistRay(r, p);
     float c = smoothstep(size, size*(1.-blur), d);
-    c *= mix(.7, 1., S(size*.8, size, d));
+    c *= mix(.7, 1., smoothstep(size*.8, size, d));
     return c;
 }
 
@@ -118,18 +137,47 @@ float Bokeh(ray r, vec3 p, float size, float blur) {
 
  void main() {
 
+    float t = uTime;
     vec2 uv = vPos.xy;
-   vec3 camPos = vec3(0., 0.2, 0.);
-    vec3 lookAt = vec3(0., 0.2, 1.);
+    vec2 uv_backup = uv;
+   vec3 camPos = vec3(0., 0.0, 0.);
+    vec3 lookAt = vec3(uMouse.x, uMouse.y, 1.);
+
+    uv.x += sin(uv.y*20.0)*0.01;
+    uv.y += sin(uv.x*20.0)*0.01;
 
     vec2 distortion = rain(uv, uTime)*0.8; 
-    distortion += rain(uv*2., uTime)*2.2; 
+    distortion += rain(uv*2., uTime)*2.2;
+    uv = uv_backup;
+
+    vec3 col = vec3(0, 0, 0);
+
+    uv.x += sin(uv.y*50.0)*0.05;
+    uv.y += sin(uv.x*50.0)*0.05;
     
-     ray r = CameraSetup(uv-distortion*0.5, camPos, lookAt, 5.0);
-      vec3 p = vec3(0.,.6,5.);
+    ray r = CameraSetup(uv-distortion*0.5, camPos, lookAt, 1.0);
+
+
+
+    vec3 p = vec3(0.,.6,1.);
+    vec3 p2 = vec3(2.0,-2.,2.);
+    vec3 p3 = vec3(-2.0,-2.,2.);
    	
     float c = Bokeh(r, p, .7, .3);
-	vec3 col = vec3(1.,.7, .1) *c;
+	col = vec3(1.,.7, .7) *c;
+    
+    c = Bokeh(r, p2, .7, 0.5);
+    col += sin(t/2. + sin(t + sin(t) * 0.5)) * vec3(0.1,.7, .1) *c;
+
+    c = Bokeh(r, p3, 1.2, .5);
+    col += sin(uTime/4.) * vec3(1., 1.0, .1) *c;
+
+    //eliptical window effect.
+    uv = uv_backup;
+    if (((0.0 - uv.x) * (0.0 - uv.x))/2. + (0.0 - uv.y) * (0.0 - uv.y) > 1.0) {
+        col = vec3(0.05, 0.05, 0.05);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 
  }</script>
@@ -147,6 +195,13 @@ Final : Some Rain
 <script id='my_instructions' type='text/html'><font color=black>
     <b id="description"> DESCRIPTION </b>
     <p>
+        This is an implementation of the ray tracing algorithm that was explained in class. To make sure that all aspects
+        of the described algorithm are working I performed an animation which starts with a yellow sphere far away. We then
+        proceed to bring the sphere closer and until it reaches z = 0. Since the focal point is set to z = 1 and the radius 
+        of the sphere is 1, it is at this point that the sphere touches the focal point and the inside of the sphere comes into view.
+        To see this difference, I used a step function to color the inside of the sphere in a gray color. Eventually,
+        once the sphere reaches the coordinate z = 3, the focal point lies on the boundary of the sphere looking away from it.
+        This is when the color of the screen turns completely dark, as there is no object in front to render.
     </p>
 
 
@@ -163,8 +218,8 @@ var vs = my_vertex_shader.innerHTML,
     fs = fs.substring(1, fs.length);
 
 document.body.innerHTML = [''
-   ,'<a href="/"><h1> <font size=40em><center padding-bottom=10px>' + my_title.innerHTML + '</center></font></h1></a>'
-   
+   ,'<a href="list-view.html"><h1> <font size=40em><center padding-bottom=10px>' + my_title.innerHTML + '</center></font></h1></a>'
+   ,'<TABLE cellspacing=10 cellpadding=10 padding top=50 background-color=black><TR>'
    ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
    ,'</TR><TR>'
    ,'<table cellspacing=10>'
@@ -193,25 +248,45 @@ textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
 
 var startTime = Date.now();
 
+
+var mouseX = 0;
+var mouseY = 0;
+
+
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
    setUniform('1f', 'uTime', time);
+   setUniform('2fv', 'uMouse', [mouseX, mouseY]);
 }
 
 
 gl_start(canvas1, vs, fs);
 
-canvas1.style.width = '800px';
-canvas1.style.height = '800px';
+canvas1.style.width = '1200px';
+canvas1.style.height = '1200px';
+
+
 
 var big = true;
 var txtwidth  = textArea.style.width;
 textArea.style.display = "none";
-document.getElementById("description").innerHTML
+document.getElementById("description_entry").style.display="none";
 
 document.getElementById("description").innerHTML = 
     "Description (press on canvas to open text editor)" 
-document.getElementById("description_entry").style.display = "none";
+
+canvas1.addEventListener('mousemove', function(evt) {
+    var rect = canvas1.getBoundingClientRect();
+
+    let X = evt.clientX - rect.left;
+    let Y = evt.clientY - rect.top;
+    let W = canvas1.width;
+    let H = canvas1.height;
+    console.log(H);
+    mouseX = -((X - 0)/(W) * (-1 - 1) + 1);
+    mouseY = ((Y - 0)/(H) * (-1 - 1) + 1);
+})
+
 
 function resz(evt) {
    if (big) {
@@ -224,8 +299,8 @@ function resz(evt) {
        big = false;
    } else {
        big = true;
-       //canvas1.style.width = '800px';
-       //canvas1.style.height = '800px';
+       //canvas1.style.width = '1200px';
+       //canvas1.style.height = '1200px';
 
        //document.getElementById("description_entry").style.display = "block";
        textArea.style.display = "none";
@@ -236,17 +311,4 @@ canvas1.addEventListener('mousedown', resz);
 
 
 </script>
-
-<style>
-    body {
-        background-color: black;
-    }
-    #canvas1{
-        position: relative;
-        margin: auto;
-        margin-left: auto;
-         margin-right: auto;
-    }
-    
-</style>
 
