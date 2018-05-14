@@ -38,7 +38,9 @@ body{
 
  uniform float uTime;   // TIME, IN SECONDS
  uniform vec2 uMouse;   // mousePos
-
+ uniform vec2 uPlayer;   // mousePos
+ uniform vec3 uSpheres[100];
+ uniform vec3 uColors[100];
  varying vec3 vPos;     // -1 < vPos.x < +1
                         // -1 < vPos.y < +1
                         //      vPos.z == 0
@@ -71,12 +73,6 @@ vec2 rain(vec2 uv, float t) {
     t += fract(sin(id.x*68.24 + id.y * 1433.98) * 762.35)*6.283;
     float y =-sin(t + sin(t + sin(t) * 0.5)) * 0.42;
     float x = 0.;
-    //float x = -sin(t + sin(t + sin(t) * 0.5)) * 0.4;
-    //if (fract(id.x*68.24) < 0.33) {
-    //   x =  0.;
-    //} else if (fract(id.x*75.23) < 0.66) {
-    //    float x = -sin(t + sin(t + sin(t) * 0.5)) * 0.4;
-    //}
     vec2 p1 = vec2(x, y);
     vec2 o1 = (st-p1)/a;
     float d = length(o1);
@@ -140,37 +136,30 @@ float Bokeh(ray r, vec3 p, float size, float blur) {
     float t = uTime;
     vec2 uv = vPos.xy;
     vec2 uv_backup = uv;
-   vec3 camPos = vec3(0., 0.0, 0.);
-    vec3 lookAt = vec3(uMouse.x, uMouse.y, 1.);
+    vec3 camPos = vec3(uPlayer.y, 0., uPlayer.x);
+    vec3 lookAt = vec3(uMouse.x + uPlayer.y, uMouse.y, 1. + uPlayer.x);
 
     uv.x += sin(uv.y*20.0)*0.01;
     uv.y += sin(uv.x*20.0)*0.01;
 
-    vec2 distortion = rain(uv, uTime)*0.8; 
-    distortion += rain(uv*2., uTime)*2.2;
+    vec2 distortion = rain(uv*5., uTime)*0.1; 
+    distortion += rain(uv*1., uTime)*2.2;
     uv = uv_backup;
 
     vec3 col = vec3(0, 0, 0);
 
-    uv.x += sin(uv.y*50.0)*0.05;
-    uv.y += sin(uv.x*50.0)*0.05;
+    uv.x += sin(uv.y*60.0)*0.005;
+    uv.y += sin(uv.x*160.0)*0.005;
     
     ray r = CameraSetup(uv-distortion*0.5, camPos, lookAt, 1.0);
 
+    float c = 0.;
+    col = vec3(0.,0.,0.);
 
-
-    vec3 p = vec3(0.,.6,1.);
-    vec3 p2 = vec3(2.0,-2.,2.);
-    vec3 p3 = vec3(-2.0,-2.,2.);
-   	
-    float c = Bokeh(r, p, .7, .3);
-	col = vec3(1.,.7, .7) *c;
-    
-    c = Bokeh(r, p2, .7, 0.5);
-    col += sin(t/2. + sin(t + sin(t) * 0.5)) * vec3(0.1,.7, .1) *c;
-
-    c = Bokeh(r, p3, 1.2, .5);
-    col += sin(uTime/4.) * vec3(1., 1.0, .1) *c;
+    for (int i = 0; i < 64; i++) {
+        c = Bokeh(r, uSpheres[i], .7, 0.3);
+        col += (uColors[i]) *c;
+    }
 
     //eliptical window effect.
     uv = uv_backup;
@@ -252,11 +241,85 @@ var startTime = Date.now();
 var mouseX = 0;
 var mouseY = 0;
 
+var playerX = -10;
+var playerY = -6;
+var forward = false;
+var backward = false;
+var leftward = false;
+var rightward = false;
+
+var change = 0.10;
+
+spheres = [];
+colors = [];
+sphere_count = 0;
+
+function cycleColor() {
+    let chance = Math.random();
+    for (let x = 0; x < sphere_count*3; x+=3) {
+        let flip = Math.random();
+        if (flip > chance) {
+            colors[x] = 0.7 + Math.random()*0.3;
+            colors[x+1] = 0.7 + Math.random()*0.3;
+            colors[x+2] = 0.7 + Math.random()*0.3;
+        }
+    }
+}
+
+function initColor() {
+    colors[0] = 0;
+}
+
+function createSphereGrid(rows, cols, lx, ly) {
+    sphere_count = rows * cols;
+    let dx = lx/cols;
+    let dy = ly/rows;
+    for(let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            spheres.push(-1*lx/2+dx*i);
+            spheres.push(-1*ly/2+dy*j);
+            spheres.push(2.0+0.1*sphere_count);
+            //colors.push(Math.abs(Math.sin((-1*lx/2+dx*i) * 64.32)))
+            //colors.push(Math.abs(Math.sin((-1*lx/2+dy*j) * 64.32)))
+            //colors.push(Math.abs(Math.sin((-1*lx/2+dx*i*j) * 64.32)))
+            colors.push(1.);
+            colors.push(1.);
+            colors.push(1.);
+        }
+    }
+    return;
+}
 
 function animate(gl) {
+    if (sphere_count == 0) {
+        createSphereGrid(8, 8, 20, 20);
+        console.log(spheres);
+    }
+
+    if (forward) {
+       playerX += change;
+   }
+   if (backward) {
+       playerX -= change;
+   }
+    if (rightward) {
+       playerY += change;
+   }
+   if (leftward) {
+       playerY -= change;
+   }
+   if (playerX > 1.0)  {playerX = 1.0};
    let time = (Date.now() - startTime) / 1000;
+
+   if (time % 3 < 0.1) {
+        cycleColor();
+   }
+
    setUniform('1f', 'uTime', time);
    setUniform('2fv', 'uMouse', [mouseX, mouseY]);
+   setUniform('2fv', 'uPlayer', [playerX, playerY]);
+   setUniform('3fv', 'uSpheres', spheres);
+   setUniform('3fv', 'uColors', colors);
 }
 
 
@@ -282,9 +345,44 @@ canvas1.addEventListener('mousemove', function(evt) {
     let Y = evt.clientY - rect.top;
     let W = canvas1.width;
     let H = canvas1.height;
-    console.log(H);
     mouseX = -((X - 0)/(W) * (-1 - 1) + 1);
     mouseY = ((Y - 0)/(H) * (-1 - 1) + 1);
+})
+
+
+
+window.addEventListener('keydown', function(event) {
+    event.preventDefault();
+  console.log(playerY);
+    if (event.keyCode == 87) { // w
+        forward = true;
+    } 
+    if (event.keyCode == 83) { // s
+        backward = true;
+    } 
+    if (event.keyCode == 65) { // a
+        leftward = true;
+    } 
+    if (event.keyCode == 68) { // d
+        rightward = true;
+    } 
+})
+
+window.addEventListener('keyup', function(event) {
+    event.preventDefault();
+    console.log(event.keyCode);
+    if (event.keyCode == 87) { // w
+        forward = false
+    } 
+    if (event.keyCode == 83) { // s
+        backward = false;
+    }
+        if (event.keyCode == 65) { // a
+        leftward = false;
+    } 
+    if (event.keyCode == 68) { // d
+        rightward = false;
+    } 
 })
 
 
